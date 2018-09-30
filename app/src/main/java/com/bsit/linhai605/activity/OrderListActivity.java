@@ -65,6 +65,7 @@ public class OrderListActivity extends Activity {
 
     /**
      * 获取此卡此设备 当天交易记录
+     *
      */
     public void getOrderList(String cardId) {
 /**
@@ -84,7 +85,7 @@ public class OrderListActivity extends Activity {
  */
         final Map param = new HashMap<>();
         param.put("deviceId", CommonUtil.getWifiMac(this));
-        param.put("merchantNo", "774411885522");//商户号
+        param.put("merchantNo", SharedUtils.getMerchantNo(this));//商户号
         param.put("cardId", cardId);
 
         OkHttpHelper.getInstance().post(this, Ip.GET_ORDER_LIST, param, new NetCallBack() {
@@ -115,11 +116,11 @@ public class OrderListActivity extends Activity {
         param.put("cardId", cardId);
         param.put("pasmSeq", SharedUtils.getCardSeq(this) + "");
         param.put("deviceId", CommonUtil.getWifiMac(this));
-        param.put("merchantNo", "774411885522");//商户号
+        param.put("merchantNo", SharedUtils.getMerchantNo(this));//商户号
         param.put("orderNo", info.getOrderNo());
-        param.put("typeCode", "032");
-        param.put("conditionCode", "00");
-
+        param.put("typeCode", SharedUtils.getTypeCody(this));
+        param.put("conditionCode", SharedUtils.getConditionCode(this));
+        param.put("signData", CommonUtil.md5(cardId + SharedUtils.getTermId(this) + SharedUtils.getCorpId(this)));
         OkHttpHelper.getInstance().post(this, Ip.CANCEL_ORDER, param, new NetCallBack() {
             @Override
             public void successCallBack(String successMsg) {

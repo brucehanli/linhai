@@ -11,7 +11,6 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.provider.Settings;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.animation.LinearInterpolator;
@@ -20,7 +19,7 @@ import android.widget.TextView;
 
 import com.bsit.linhai605.BaseApplication;
 import com.bsit.linhai605.R;
-import com.bsit.linhai605.constant.Contants;
+import com.bsit.linhai605.constant.Constant;
 import com.bsit.linhai605.constant.Ip;
 import com.bsit.linhai605.model.CommonBackJson;
 import com.bsit.linhai605.model.OrderInfo;
@@ -108,7 +107,6 @@ public class MainActivity extends Activity {
         else{
             cardConsume("31700000011333961526");
             cardConsume("31700000010000313306");
-
         }
     }
 
@@ -179,17 +177,22 @@ public class MainActivity extends Activity {
     private void qrConsume(final String qrMsg) {
         final String time = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
         final Map param = new HashMap<>();
+        String typeCode=SharedUtils.getTypeCody(this);
+        String conditionCode=SharedUtils.getConditionCode(this);
+        String termId=SharedUtils.getTermId(this);
+        String merchantNo=SharedUtils.getMerchantNo(this);
+        String corpId=SharedUtils.getCorpId(this);
         param.put("qrMessage", qrMsg);
         param.put("txnAmt", "100");
         param.put("localDate", time.substring(2, 8));
         param.put("localTime", time.substring(8, 14));
-        param.put("typeCode", "032");
-        param.put("conditionCode", "00");
+        param.put("typeCode", typeCode);
+        param.put("conditionCode", conditionCode);
         param.put("consumeType", "L");
-        param.put("merchantNo", "774411885522");//商户号
-        param.put("termId", "10006001");
+        param.put("merchantNo", merchantNo);//商户号
+        param.put("termId", termId);
         param.put("deviceId", CommonUtil.getWifiMac(MainActivity.this));
-        param.put("corpId", "330402010000006");
+        param.put("corpId", corpId);
         param.put("batchNo", time.substring(0, 8));
         OkHttpHelper.getInstance().post(this, Ip.GET_QR_INFO, param, new NetCallBack() {
             @Override
@@ -216,22 +219,27 @@ public class MainActivity extends Activity {
 
         final String time = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
         final Map param = new HashMap<>();
+        String typeCode=SharedUtils.getTypeCody(this);
+        String conditionCode=SharedUtils.getConditionCode(this);
+        String termId=SharedUtils.getTermId(this);
+        String merchantNo=SharedUtils.getMerchantNo(this);
+        String corpId=SharedUtils.getCorpId(this);
         param.put("cardId", cardId);
         param.put("txnAmt", "100");
         param.put("localDate", time.substring(2, 8));
         param.put("localTime", time.substring(8, 14));
-        param.put("typeCode", "032");
-        param.put("conditionCode", "00");
+        param.put("typeCode", typeCode);
+        param.put("conditionCode",conditionCode);
         param.put("consumeType", "L");
-        param.put("termId", "10006001");
-        param.put("merchantNo", "774411885522");//商户号
+        param.put("termId", termId);
+        param.put("merchantNo", merchantNo);//商户号
         param.put("psamSeq", SharedUtils.getCardSeq(this) + "");
 
 
-        param.put("corpId", "330402010000006");
+        param.put("corpId", corpId);
         param.put("deviceId", CommonUtil.getWifiMac(MainActivity.this));
         param.put("batchNo", time.substring(0, 8));
-        param.put("signData", CommonUtil.md5(cardId + "10006001" + "330402010000006"));
+        param.put("signData", CommonUtil.md5(cardId + termId + corpId));
         OkHttpHelper.getInstance().post(this, Ip.CARD_CONSUMPTION, param, new NetCallBack() {
             @Override
             public void successCallBack(String successMsg) {
@@ -323,6 +331,7 @@ public class MainActivity extends Activity {
     }
 
 
+
     /**
      * 心跳
      */
@@ -333,13 +342,13 @@ public class MainActivity extends Activity {
         param.put("deviceId", deviceId);
         param.put("supplierNo", "00000000");//供应商编码
         param.put("dateTime", dateTime);
-        param.put("merchantNo", "774411885522");//商户号
-        param.put("termNo", "10006001");
+        param.put("merchantNo", SharedUtils.getMerchantNo(this));//商户号
+        param.put("termNo", SharedUtils.getTermId(this));
         param.put("hardworkVer", CommonUtil.getAppName(this));//app
         param.put("whiteVer", SharedUtils.getWhiteVer(this));
         param.put("regionCode", "3170");
         String dataSign = getDataSign(deviceId + "00000000" + dateTime +
-                "774411885522" + "10006001");
+                SharedUtils.getMerchantNo(this) +SharedUtils.getTermId(this));
         param.put("dataSign", dataSign);
         OkHttpHelper.getInstance().post(this, Ip.SAVEHEARTBEAT_URL, param, new NetCallBack() {
             @Override
@@ -369,7 +378,7 @@ public class MainActivity extends Activity {
         if (!TextUtils.isEmpty(name)) {
             String ver = name.split("\\.")[0].substring(name.split("\\.")[0].length() - 3);
             if (!ver.equals(CommonUtil.getAppName(this).replace(".", ""))) {
-                String merchantNo = "774411885522";
+                String merchantNo = SharedUtils.getMerchantNo(this);
                 String deviceId = CommonUtil.getWifiMac(MainActivity.this);
 
                 HashMap<String, String> paramsMap = new HashMap<String, String>();
@@ -383,7 +392,7 @@ public class MainActivity extends Activity {
                     @Override
                     public void successCallBack(String successMsg) {
                         Log.e("下载", successMsg);
-                        CommonUtil.installSilently(Contants.PATH_DIR + successMsg);
+                        CommonUtil.installSilently(Constant.PATH_DIR + successMsg);
                     }
 
                     @Override

@@ -18,8 +18,12 @@ import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 public class CommonUtil {
+    public static final Executor EXECUTOR = Executors.newCachedThreadPool();
+
     /**
      * 判断网络是否可用
      */

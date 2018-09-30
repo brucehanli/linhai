@@ -5,16 +5,13 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Handler;
 import android.os.Looper;
-import android.provider.SyncStateContract;
 import android.text.TextUtils;
 
-import com.bsit.linhai605.constant.Contants;
-import com.bsit.linhai605.constant.Ip;
+import com.bsit.linhai605.constant.Constant;
 import com.bsit.linhai605.utils.CommonUtil;
 import com.bsit.linhai605.utils.SharedUtils;
 import com.google.gson.Gson;
 
-import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -186,13 +183,13 @@ public class OkHttpHelper {
             @Override
             public void onResponse(Call call, Response response) throws IOException {
                 if (response.code() == 200) {
-                    CommonUtil.mkdirs(Contants.PATH_DIR);
+                    CommonUtil.mkdirs(Constant.PATH_DIR);
                     //将返回结果转化为流，并写入文件
                     int len;
                     byte[] buf = new byte[2048];
                     InputStream inputStream = response.body().byteStream();
 
-                    FileOutputStream out = new FileOutputStream(Contants.PATH_DIR + params.get("fileName"));
+                    FileOutputStream out = new FileOutputStream(Constant.PATH_DIR + params.get("fileName"));
                     while ((len = inputStream.read(buf)) != -1) {
                         out.write(buf, 0, len);
                     }
