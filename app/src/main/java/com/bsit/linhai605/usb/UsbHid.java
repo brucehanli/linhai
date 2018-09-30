@@ -10,6 +10,8 @@ import android.hardware.usb.UsbInterface;
 import android.hardware.usb.UsbManager;
 import android.util.Log;
 
+import com.bsit.linhai605.utils.ByteUtil;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -155,6 +157,7 @@ public class UsbHid {
 
     /**
      * 获取usb设备列表
+     *
      * @return
      */
     public List<UsbDevice> getUsbDeviceList() {
@@ -195,10 +198,9 @@ public class UsbHid {
      * @param data
      */
     public void SendData(byte[] data) {
-        Log.d(TAG, "Send Data");
+        Log.d(TAG, "Send Data" + ByteUtil.byte2HexStr(data));
         if (myDeviceConnection != null) {
             int sendReturn = myDeviceConnection.bulkTransfer(epOut, data, 64, TIMEOUT);
-            Log.d(TAG, "bulktransfer return = " + sendReturn);
             if (sendReturn <= 0) {
                 reConnectDevice();
             }

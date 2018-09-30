@@ -29,14 +29,14 @@ public class RcvDataHandler extends Handler {
     public void handleMessage(Message msg) {
         switch (msg.what) {
             case NOTICE_DATE:
-                noticeDate((byte[]) msg.obj);
+                noticeDate(msg.arg1, (byte[]) msg.obj);
                 break;
             default:
                 break;
         }
     }
 
-    private void noticeDate(byte[] data) {
-        mListener.receive(data);
+    private void noticeDate(int what, byte[] data) {
+        mListener.receive(what, data);
     }
 }

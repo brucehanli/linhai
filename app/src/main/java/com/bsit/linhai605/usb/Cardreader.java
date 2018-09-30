@@ -22,8 +22,8 @@ public class Cardreader {
         ihandler = RcvDataHandler.getInstance();
         ihandler.setNoticeDateListener(new NoticeDataListener() {
             @Override
-            public void receive(byte[] response) {
-                mSendListener.onReceive(ByteUtil.byte2HexStr(response));
+            public void receive(int what, byte[] response) {
+                mSendListener.onReceive(what, ByteUtil.byte2HexStr(response));
             }
         });
     }
@@ -59,7 +59,6 @@ public class Cardreader {
      * bslot ==0x0e 接触卡
      */
     public byte[] card_poweron(int bslot) {
-        Log.e("SEND", "上电复位");
         byte[] src = new byte[512];
         src[0] = 0x62;
         src[1] = (byte) 0 & 0xff;
@@ -108,8 +107,8 @@ public class Cardreader {
      * @param cmd
      * @return response byte array
      */
-    public byte[] sendApdu(int bslot, int cmdlen, byte[] cmd) {
-        Log.e("SEND", ByteUtil.byte2HexStr(cmd));
+    private byte[] sendApdu(int bslot, int cmdlen, byte[] cmd) {
+//        Log.e("SEND", ByteUtil.byte2HexStr(cmd));
         byte[] src = new byte[512];
         System.arraycopy(cmd, 0, src, 0, cmd.length);
         int offset = 0;
@@ -125,7 +124,7 @@ public class Cardreader {
                 offset += datalen;
                 datalen = 0;
             }
-            Log.i("SEND-FULL", ByteUtil.byte2HexStr(datatosend));
+//            Log.i("SEND-FULL", ByteUtil.byte2HexStr(datatosend));
             usbhid.SendData(datatosend);
             mSendListener.onSend(ByteUtil.byte2HexStr(datatosend));
         }
@@ -141,19 +140,23 @@ public class Cardreader {
      * @return 底板返回的数组
      */
     private byte[] rvcResNoDelay() {
-        synchronized (usbhid) {
+        synchronized (mSendListener) {
             byte[] resp = new byte[512];
             int resplen = 0;
             byte[] recvdata = null;
             int count = 0;
             do {
                 if (count > 4) {
-                    usbhid.notify();
-                    return null;
+                    try {
+                        mSendListener.wait();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+//                    return null;
                 }
                 recvdata = usbhid.RecData();
-                Log.i("RCV-------do-while----", ByteUtil.byte2HexStr(recvdata));
                 count++;
+                mSendListener.notify();
             }
             while ((recvdata[0] != -128) && (recvdata[0] != -126));
             if (recvdata == null) {
@@ -188,8 +191,8 @@ public class Cardreader {
             }
             byte[] ret_resp = new byte[resplen];
             System.arraycopy(resp, 0, ret_resp, 0, resplen);
-            Log.i("RCV-------------", ByteUtil.byte2HexStr(ret_resp));
-            mSendListener.onReceive(ByteUtil.byte2HexStr(ret_resp));
+            Log.i("rcv data nodelay", "rcv data = " + ByteUtil.byte2HexStr(ret_resp));
+            mSendListener.onReceive(SendDataListener.TYPE_CARD_RESPONSE, ByteUtil.byte2HexStr(ret_resp));
             return ret_resp;
         }
     }
@@ -216,8 +219,8 @@ public class Cardreader {
      *
      * @return
      */
-    public byte[] recycleRcvResp() {
-        synchronized (usbhid) {
+    private byte[] recycleRcvResp() {
+        synchronized (mSendListener) {
             byte[] recvdata;
             while (true) {
                 recvdata = usbhid.RecData();
@@ -226,17 +229,19 @@ public class Cardreader {
                         int recvlen = recvdata[1] + recvdata[2] * 256 + recvdata[3] * 256 * 256 + recvdata[4] * 256 * 256 * 256;
                         byte[] ret_resp = new byte[recvlen];
                         System.arraycopy(recvdata, 10, ret_resp, 0, recvlen);
-                        Log.i("&&&&&&&&&&&&&&&", ByteUtil.byte2HexStr(ret_resp));
                         Message message = ihandler.obtainMessage();
                         message.what = RcvDataHandler.NOTICE_DATE;
                         message.obj = ret_resp;
-                        ihandler.sendMessage(message);
-                        usbhid.wait();
+                        message.arg1 = SendDataListener.TYPE_CARD_AUTO_REPORT;
+                        message.sendToTarget();
+                        Log.i("listen data", "listen data = " + ByteUtil.byte2HexStr(ret_resp));
+                        mSendListener.wait();
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
 
                 }
+                mSendListener.notify();
             }
         }
     }
