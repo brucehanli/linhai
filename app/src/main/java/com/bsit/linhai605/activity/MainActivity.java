@@ -26,6 +26,10 @@ import com.bsit.linhai605.model.OrderInfo;
 import com.bsit.linhai605.model.SaveHeart;
 import com.bsit.linhai605.net.NetCallBack;
 import com.bsit.linhai605.net.OkHttpHelper;
+import com.bsit.linhai605.usb.Cardreader;
+import com.bsit.linhai605.usb.KeyMap;
+import com.bsit.linhai605.usb.SendDataListener;
+import com.bsit.linhai605.utils.ByteUtil;
 import com.bsit.linhai605.utils.CommonUtil;
 import com.bsit.linhai605.utils.EncryptUtils;
 import com.bsit.linhai605.utils.SharedUtils;
@@ -47,7 +51,7 @@ import butterknife.ButterKnife;
 import butterknife.OnClick;
 
 
-public class MainActivity extends Activity {
+public class MainActivity extends Activity implements SendDataListener {
 
     @BindView(R.id.tv_time)
     TextView tvTime;
@@ -59,7 +63,7 @@ public class MainActivity extends Activity {
     TextView tvMainMsg;
     @BindView(R.id.capture_scan_line)
     ImageView captureScanLine;
-
+    private Cardreader mCardReader;
     private ValueAnimator mScanAnimator;
     @SuppressLint("HandlerLeak")
     private Handler handler = new Handler() {
@@ -102,9 +106,10 @@ public class MainActivity extends Activity {
         capturePreview.setScanCallback(resultCallback);
         initNet();
         heart();
+        getUsbDeviceParams();
         if (TextUtils.isEmpty(SharedUtils.getToken(this)))
             login();
-        else{
+        else {
             cardConsume("31700000011333961526");
             cardConsume("31700000010000313306");
         }
@@ -118,6 +123,14 @@ public class MainActivity extends Activity {
         } else {//网络未连接图标
             imgNet.setImageResource(R.mipmap.ic_net);
         }
+    }
+
+    public void getUsbDeviceParams() {
+        mCardReader = new Cardreader();
+        mCardReader.setSendDataListener(this);
+        mCardReader.openreader(this);
+        byte[] cardSN = mCardReader.getDeviceSN();
+        mCardReader.listenRcvData();
     }
 
     /**
@@ -177,11 +190,11 @@ public class MainActivity extends Activity {
     private void qrConsume(final String qrMsg) {
         final String time = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
         final Map param = new HashMap<>();
-        String typeCode=SharedUtils.getTypeCody(this);
-        String conditionCode=SharedUtils.getConditionCode(this);
-        String termId=SharedUtils.getTermId(this);
-        String merchantNo=SharedUtils.getMerchantNo(this);
-        String corpId=SharedUtils.getCorpId(this);
+        String typeCode = SharedUtils.getTypeCody(this);
+        String conditionCode = SharedUtils.getConditionCode(this);
+        String termId = SharedUtils.getTermId(this);
+        String merchantNo = SharedUtils.getMerchantNo(this);
+        String corpId = SharedUtils.getCorpId(this);
         param.put("qrMessage", qrMsg);
         param.put("txnAmt", "100");
         param.put("localDate", time.substring(2, 8));
@@ -219,17 +232,17 @@ public class MainActivity extends Activity {
 
         final String time = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
         final Map param = new HashMap<>();
-        String typeCode=SharedUtils.getTypeCody(this);
-        String conditionCode=SharedUtils.getConditionCode(this);
-        String termId=SharedUtils.getTermId(this);
-        String merchantNo=SharedUtils.getMerchantNo(this);
-        String corpId=SharedUtils.getCorpId(this);
+        String typeCode = SharedUtils.getTypeCody(this);
+        String conditionCode = SharedUtils.getConditionCode(this);
+        String termId = SharedUtils.getTermId(this);
+        String merchantNo = SharedUtils.getMerchantNo(this);
+        String corpId = SharedUtils.getCorpId(this);
         param.put("cardId", cardId);
         param.put("txnAmt", "100");
         param.put("localDate", time.substring(2, 8));
         param.put("localTime", time.substring(8, 14));
         param.put("typeCode", typeCode);
-        param.put("conditionCode",conditionCode);
+        param.put("conditionCode", conditionCode);
         param.put("consumeType", "L");
         param.put("termId", termId);
         param.put("merchantNo", merchantNo);//商户号
@@ -303,6 +316,31 @@ public class MainActivity extends Activity {
         startActivity(new Intent(this, OrderListActivity.class));
     }
 
+    @Override
+    public void onSend(String send) {
+
+    }
+
+    @Override
+    public void onReceive(int what, String rcv) {
+        if (what == SendDataListener.TYPE_CARD_AUTO_REPORT) {       
+            if (rcv.length() == 6) { //按键
+                String key = rcv.substring(0, 2);
+                String value = KeyMap.getInstance().getValue(key);
+            } else { //卡信息-atr
+                int length = rcv.length();
+                String atr = rcv.substring(0, length - 4);
+//                cardConsume(atr);
+            }
+            byte[] cardNoBytes = mCardReader.getCardNo();
+            String rcvCardNo = ByteUtil.byte2HexStr(cardNoBytes);
+            String cardNo = ""; //卡号
+            if (rcvCardNo.endsWith("9000")) {
+                cardNo = rcvCardNo.substring(0, rcvCardNo.length() - 2);
+            }
+        }
+    }
+
     /**
      * 获取网络时间
      */
@@ -331,7 +369,6 @@ public class MainActivity extends Activity {
     }
 
 
-
     /**
      * 心跳
      */
@@ -348,7 +385,7 @@ public class MainActivity extends Activity {
         param.put("whiteVer", SharedUtils.getWhiteVer(this));
         param.put("regionCode", "3170");
         String dataSign = getDataSign(deviceId + "00000000" + dateTime +
-                SharedUtils.getMerchantNo(this) +SharedUtils.getTermId(this));
+                SharedUtils.getMerchantNo(this) + SharedUtils.getTermId(this));
         param.put("dataSign", dataSign);
         OkHttpHelper.getInstance().post(this, Ip.SAVEHEARTBEAT_URL, param, new NetCallBack() {
             @Override
