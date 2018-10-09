@@ -136,56 +136,53 @@ public class Cardreader {
      * @return 底板返回的数组
      */
     private byte[] rvcResNoDelay() {
-        synchronized (mSendListener) {
-            byte[] resp = new byte[512];
-            int resplen = 0;
-            byte[] recvdata = null;
-            int count = 0;
-            do {
-                recvdata = usbhid.RecData();
-                Log.i("**********", "rcv data = " + ByteUtil.byte2HexStr(recvdata));
-                if ((count > 4)) {
-                    return null;
-                }
-                count++;
-                mSendListener.notify();
-            }
-            while ((recvdata[0] != -128) && (recvdata[0] != -126));
-            if (recvdata == null) {
+        byte[] resp = new byte[512];
+        int resplen = 0;
+        byte[] recvdata = null;
+        int count = 0;
+        do {
+            recvdata = usbhid.RecData();
+            if ((count > 4)) {
                 return null;
             }
-            int recvlen = recvdata[1] + recvdata[2] * 256 + recvdata[3] * 256 * 256 + recvdata[4] * 256 * 256 * 256;
-            if (recvlen == 0)
-                return null;
-            int leftlen = recvlen;
-            recvlen += 10;
-            if (recvlen < 64) {
-                System.arraycopy(recvdata, 10, resp, 0, recvlen - 10);
-                leftlen = 0;
-                resplen = recvlen - 10;
-            } else {
-                System.arraycopy(recvdata, 10, resp, 0, 64 - 10);
-                leftlen -= (64 - 10);
-                resplen = 64 - 10;
-            }
-
-            while (leftlen > 0) {
-                recvdata = usbhid.RecData();
-                if (leftlen > 64) {
-                    System.arraycopy(recvdata, 0, resp, resplen, 64);
-                    leftlen -= 64;
-                    resplen += 64;
-                } else {
-                    System.arraycopy(recvdata, 0, resp, resplen, leftlen);
-                    leftlen -= leftlen;
-                    resplen += leftlen;
-                }
-            }
-            byte[] ret_resp = new byte[resplen];
-            System.arraycopy(resp, 0, ret_resp, 0, resplen);
-            mSendListener.onReceive(SendDataListener.TYPE_CARD_RESPONSE, ByteUtil.byte2HexStr(ret_resp));
-            return ret_resp;
+            count++;
         }
+        while ((recvdata[0] != -128) && (recvdata[0] != -126));
+        if (recvdata == null) {
+            return null;
+        }
+        int recvlen = recvdata[1] + recvdata[2] * 256 + recvdata[3] * 256 * 256 + recvdata[4] * 256 * 256 * 256;
+        if (recvlen == 0)
+            return null;
+        int leftlen = recvlen;
+        recvlen += 10;
+        if (recvlen < 64) {
+            System.arraycopy(recvdata, 10, resp, 0, recvlen - 10);
+            leftlen = 0;
+            resplen = recvlen - 10;
+        } else {
+            System.arraycopy(recvdata, 10, resp, 0, 64 - 10);
+            leftlen -= (64 - 10);
+            resplen = 64 - 10;
+        }
+
+        while (leftlen > 0) {
+            recvdata = usbhid.RecData();
+            if (leftlen > 64) {
+                System.arraycopy(recvdata, 0, resp, resplen, 64);
+                leftlen -= 64;
+                resplen += 64;
+            } else {
+                System.arraycopy(recvdata, 0, resp, resplen, leftlen);
+                leftlen -= leftlen;
+                resplen += leftlen;
+            }
+        }
+        byte[] ret_resp = new byte[resplen];
+        System.arraycopy(resp, 0, ret_resp, 0, resplen);
+        Log.i("rcv data nodelay", "rcv data = " + ByteUtil.byte2HexStr(ret_resp));
+        mSendListener.onReceive(SendDataListener.TYPE_CARD_RESPONSE, ByteUtil.byte2HexStr(ret_resp));
+        return ret_resp;
     }
 
     private byte[] sendPDU(byte[] sendBytes) {
@@ -211,31 +208,25 @@ public class Cardreader {
      * @return
      */
     private byte[] recycleRcvResp() {
-        synchronized (mSendListener) {
-            byte[] recvdata;
-            while (true) {
-                recvdata = usbhid.RecData();
-                if (recvdata[0] == -128) {
-                    try {
-                        int recvlen = recvdata[1] + recvdata[2] * 256 + recvdata[3] * 256 * 256 + recvdata[4] * 256 * 256 * 256;
-                        if (recvdata[recvlen + 10 - 2] == -112 && recvdata[recvlen + 10 - 1] == 0) {
-                            byte[] operatrCardBytes = {0x6F, 0x07, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, (byte) 0x00, (byte) 0xA4, 0x00, 0x00, 0x02, 0x3F, 0x00};
-                            operCommInstruct(operatrCardBytes);
-                            byte[] ret_resp = new byte[recvlen];
-                            System.arraycopy(recvdata, 10, ret_resp, 0, recvlen);
-                            Message message = ihandler.obtainMessage();
-                            message.what = RcvDataHandler.NOTICE_DATE;
-                            message.obj = ret_resp;
-                            message.arg1 = SendDataListener.TYPE_CARD_AUTO_REPORT;
-                            message.sendToTarget();
-                            mSendListener.wait();
-                        }
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
+        byte[] recvdata;
+        while (true) {
+            recvdata = usbhid.RecData();
+            if (recvdata[0] == -128) {
+                int recvlen = recvdata[1] + recvdata[2] * 256 + recvdata[3] * 256 * 256 + recvdata[4] * 256 * 256 * 256;
+                Log.i("listen data *********", "listen data = " + ByteUtil.byte2HexStr(recvdata));
+                if (recvdata[recvlen + 10 - 2] == -112 && recvdata[recvlen + 10 - 1] == 0) {
+                    if (recvdata[1] > 3) {
+                        byte[] operatrCardBytes = {0x6F, 0x07, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, (byte) 0x00, (byte) 0xA4, 0x00, 0x00, 0x02, 0x3F, 0x00};
+                        operCommInstruct(operatrCardBytes);
                     }
-
+                    byte[] ret_resp = new byte[recvlen];
+                    System.arraycopy(recvdata, 10, ret_resp, 0, recvlen);
+                    Message message = ihandler.obtainMessage();
+                    message.what = RcvDataHandler.NOTICE_DATE;
+                    message.obj = ret_resp;
+                    message.arg1 = SendDataListener.TYPE_CARD_AUTO_REPORT;
+                    message.sendToTarget();
                 }
-                mSendListener.notify();
             }
         }
     }
@@ -345,6 +336,9 @@ public class Cardreader {
      */
     public byte[] operCommInstruct(byte[] operatBytes) {
         byte[] rcvOperateBytes = sendPDU(operatBytes);
+        if (rcvOperateBytes == null) {
+            return new byte[0];
+        }
         return rcvOperateBytes;
     }
 
@@ -356,6 +350,9 @@ public class Cardreader {
     public byte[] getCardNo() {
         byte[] cardNo = {0x6F, 0x05, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, (byte) 0xb0, (byte) 0x95, 0x09, 0x0a};
         byte[] rcvCardNoBytes = sendPDU(cardNo);
+        if (rcvCardNoBytes == null) {
+            return new byte[0];
+        }
         return rcvCardNoBytes;
     }
 }

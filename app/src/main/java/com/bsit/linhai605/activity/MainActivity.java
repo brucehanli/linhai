@@ -129,7 +129,7 @@ public class MainActivity extends Activity implements SendDataListener {
         mCardReader = new Cardreader();
         mCardReader.setSendDataListener(this);
         mCardReader.openreader(this);
-        byte[] cardSN = mCardReader.getDeviceSN();
+//        byte[] cardSN = mCardReader.getDeviceSN();
         mCardReader.listenRcvData();
     }
 
@@ -323,7 +323,7 @@ public class MainActivity extends Activity implements SendDataListener {
 
     @Override
     public void onReceive(int what, String rcv) {
-        if (what == SendDataListener.TYPE_CARD_AUTO_REPORT) {       
+        if (what == SendDataListener.TYPE_CARD_AUTO_REPORT) {
             if (rcv.length() == 6) { //按键
                 String key = rcv.substring(0, 2);
                 String value = KeyMap.getInstance().getValue(key);
@@ -331,12 +331,12 @@ public class MainActivity extends Activity implements SendDataListener {
                 int length = rcv.length();
                 String atr = rcv.substring(0, length - 4);
 //                cardConsume(atr);
-            }
-            byte[] cardNoBytes = mCardReader.getCardNo();
-            String rcvCardNo = ByteUtil.byte2HexStr(cardNoBytes);
-            String cardNo = ""; //卡号
-            if (rcvCardNo.endsWith("9000")) {
-                cardNo = rcvCardNo.substring(0, rcvCardNo.length() - 2);
+                byte[] cardNoBytes = mCardReader.getCardNo();
+                String rcvCardNo = ByteUtil.byte2HexStr(cardNoBytes);
+                String cardNo = ""; //卡号
+                if (rcvCardNo.endsWith("9000")) {
+                    cardNo = rcvCardNo.substring(0, rcvCardNo.length() - 2);
+                }
             }
         }
     }
