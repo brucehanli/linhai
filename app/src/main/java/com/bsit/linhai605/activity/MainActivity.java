@@ -45,6 +45,8 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -331,12 +333,16 @@ public class MainActivity extends Activity implements SendDataListener {
                 int length = rcv.length();
                 String atr = rcv.substring(0, length - 4);
 //                cardConsume(atr);
-                byte[] cardNoBytes = mCardReader.getCardNo();
-                String rcvCardNo = ByteUtil.byte2HexStr(cardNoBytes);
-                String cardNo = ""; //卡号
-                if (rcvCardNo.endsWith("9000")) {
-                    cardNo = rcvCardNo.substring(0, rcvCardNo.length() - 2);
-                }
+            }
+        } else if (what == SendDataListener.TYPE_CARD_RESPONSE) {
+            if (rcv.equals("6F00")) {
+                return;
+            }
+            if (rcv.matches("\\d+") && rcv.endsWith("9000")) {
+                String cardNo = rcv.substring(0, rcv.length() - 4);
+                return;
+            } else {
+                mCardReader.getCardNo();
             }
         }
     }
